@@ -1,0 +1,26 @@
+name: ripsast (test)
+
+on:
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so `git merge-base` in --diff-base resolves
+
+      - name: Install scanners
+        run: |
+          python3 -m pip install --quiet semgrep
+          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh | sh -s -- -b /usr/local/bin
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan changed files with ripsast
+        run: |
+          chmod +x .github/ripsast-bin/ripsast
+          .github/ripsast-bin/ripsast scan \
+            --diff-base origin/${{ github.base_ref }} \
+            --tools semgrep,gitleaks,trivy \
+            --fail-on high
