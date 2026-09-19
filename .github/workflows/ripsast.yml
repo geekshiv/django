@@ -12,10 +12,13 @@ jobs:
           fetch-depth: 0 # full history so `git merge-base` in --diff-base resolves
 
       - name: Install scanners
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 -m pip install --quiet semgrep
-          curl -sSfL https://raw.githubusercontent.com/gitleaks/gitleaks/master/install.sh -o /tmp/gitleaks-install.sh
-          sh /tmp/gitleaks-install.sh -b /usr/local/bin
+          gh release download -R gitleaks/gitleaks --pattern 'gitleaks_*_linux_x64.tar.gz' -O /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          chmod +x /usr/local/bin/gitleaks
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh -o /tmp/trivy-install.sh
           sh /tmp/trivy-install.sh -b /usr/local/bin
 
