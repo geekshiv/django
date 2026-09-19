@@ -1,0 +1,33 @@
+name: ripsast (test)
+
+on:
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
+        with:
+          fetch-depth: 0 # full history so `git merge-base` in --diff-base resolves
+
+      - name: Install scanners
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m pip install --quiet semgrep
+          gh release download -R gitleaks/gitleaks --pattern 'gitleaks_*_linux_x64.tar.gz' -O /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+          chmod +x /usr/local/bin/gitleaks
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh -o /tmp/trivy-install.sh
+          sh /tmp/trivy-install.sh -b /usr/local/bin
+
+      - name: Scan changed files with ripsast
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          chmod +x .github/ripsast-bin/ripsast
+          .github/ripsast-bin/ripsast scan \
+            --diff-base "origin/$BASE_REF" \
+            --tools semgrep,gitleaks,trivy \
+            --fail-on high
